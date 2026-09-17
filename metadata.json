@@ -1,6 +1,6 @@
 {
-  "name": "PLAYID - Xtream IPTV Web Player",
-  "description": "PLAYID เว็บเพลเยอร์สำหรับ Xtream IPTV รองรับทีวีสด ผังรายการ EPG ภาพยนตร์ ซีรีส์ และโหมดเบราว์เซอร์ทีวี พร้อมระบบสตรีมมิ่งพร็อกซี",
+  "name": "Streamly - Xtream IPTV Web Player",
+  "description": "เว็บเพลเยอร์สำหรับ Xtream IPTV รองรับทีวีสด ผังรายการ EPG ภาพยนตร์ ซีรีส์ และโหมดเบราว์เซอร์ทีวี พร้อมระบบสตรีมมิ่งพร็อกซี",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

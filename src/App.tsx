@@ -31,8 +31,6 @@ import { VodMoviesView } from './components/VodMoviesView';
 import { SeriesView } from './components/SeriesView';
 import { EpgGuideView } from './components/EpgGuideView';
 import { ChannelEpgModal } from './components/ChannelEpgModal';
-import { AdminContactModal, ADMIN_LINE_URL } from './components/AdminContactModal';
-import { MessageCircle, ExternalLink } from 'lucide-react';
 
 const STORAGE_KEY_CREDS = 'streamly_credentials';
 const STORAGE_KEY_FAVS = 'streamly_favorites';
@@ -76,8 +74,6 @@ export default function App() {
   // EPG modal state
   const [epgModalStream, setEpgModalStream] = useState<LiveStream | null>(null);
   const [epgModalList, setEpgModalList] = useState<EPGItem[]>([]);
-  const [showContactModal, setShowContactModal] = useState<boolean>(false);
-  const [selectedSeriesForView, setSelectedSeriesForView] = useState<SeriesStream | null>(null);
 
   // Load saved session on mount
   useEffect(() => {
@@ -86,12 +82,7 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.server && parsed.username && parsed.password) {
-          handleLogin(
-            parsed, 
-            parsed.server.includes('demo.streamly.tv') || 
-            parsed.server.includes('vip.streamly.tv') ||
-            parsed.server.includes('vip.playid.tv')
-          );
+          handleLogin(parsed, parsed.server.includes('demo.streamly.tv'));
         }
       }
     } catch (e) {
@@ -400,12 +391,6 @@ export default function App() {
     }
   };
 
-  const handleSelectSeriesFromSearch = (series: SeriesStream) => {
-    setSelectedSeriesForView(series);
-    setActiveTab('series');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const getChannelEpgHelper = (streamId: number) => {
     if (isDemo) {
       return getDemoEPG(streamId);
@@ -438,12 +423,6 @@ export default function App() {
         userInfo={userInfo}
         serverInfo={serverInfo}
         serverUrl={credentials?.server}
-        liveStreams={liveStreams}
-        movies={movies}
-        seriesList={seriesList}
-        onSelectLive={handleSelectLiveChannel}
-        onSelectMovie={handleSelectMovie}
-        onSelectSeries={handleSelectSeriesFromSearch}
       />
 
       {/* Main Container */}
@@ -490,7 +469,6 @@ export default function App() {
               onSelectEpisode={handleSelectEpisode}
               fetchSeriesDetails={fetchSeriesDetails}
               isTvMode={isTvMode}
-              selectedSeries={selectedSeriesForView}
             />
           )}
 
@@ -515,42 +493,15 @@ export default function App() {
         />
       )}
 
-      {/* Admin Contact Modal */}
-      <AdminContactModal
-        isOpen={showContactModal}
-        onClose={() => setShowContactModal(false)}
-      />
-
-      {/* Floating Admin Contact Button */}
-      <button
-        id="floating-line-contact-btn"
-        onClick={() => setShowContactModal(true)}
-        title="ติดต่อแอดมิน LINE"
-        className="fixed bottom-5 right-5 z-30 flex items-center gap-2 px-3.5 py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold text-xs rounded-full shadow-lg shadow-[#06C755]/30 hover:scale-105 active:scale-95 transition cursor-pointer"
-      >
-        <MessageCircle className="w-4 h-4 fill-current" />
-        <span className="hidden sm:inline">ติดต่อแอดมิน LINE</span>
-      </button>
-
       {/* Footer */}
       <footer className="mt-12 py-6 border-t border-zinc-900 text-center text-xs text-zinc-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>
-            PLAYID IPTV Web Player • URL เดียว ทุกหน้าจอ (มือถือ, iPad, PC และ Fire TV Browser)
+            Streamly IPTV Web Player • URL เดียว ทุกหน้าจอ (มือถือ, iPad, PC และ Fire TV Browser)
           </p>
-          <div className="flex items-center gap-4 text-[11px]">
-            <button
-              onClick={() => setShowContactModal(true)}
-              className="text-[#06C755] hover:underline flex items-center gap-1 font-medium cursor-pointer"
-            >
-              <MessageCircle className="w-3 h-3 fill-current" />
-              <span>ติดต่อแอดมิน LINE</span>
-            </button>
-            <span className="text-zinc-500">•</span>
-            <span className="text-zinc-400">
-              HLS Browser Streaming • Built-in CORS Proxy
-            </span>
-          </div>
+          <p className="text-[11px] text-zinc-400">
+            HLS Browser Streaming • Built-in CORS Proxy
+          </p>
         </div>
       </footer>
     </div>

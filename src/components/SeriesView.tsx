@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Category, SeriesStream, SeriesEpisode } from '../types';
 import { 
   Search, 
@@ -18,7 +18,6 @@ interface SeriesViewProps {
   onSelectEpisode: (series: SeriesStream, episode: any, seasonNum: number) => void;
   fetchSeriesDetails: (seriesId: number | string) => Promise<any>;
   isTvMode: boolean;
-  selectedSeries?: SeriesStream | null;
 }
 
 export const SeriesView: React.FC<SeriesViewProps> = ({
@@ -27,7 +26,6 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   onSelectEpisode,
   fetchSeriesDetails,
   isTvMode,
-  selectedSeries,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,13 +33,6 @@ export const SeriesView: React.FC<SeriesViewProps> = ({
   const [seriesInfo, setSeriesInfo] = useState<any | null>(null);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-
-  // If a series was selected externally (e.g. from header search), open it automatically
-  useEffect(() => {
-    if (selectedSeries) {
-      handleOpenSeries(selectedSeries);
-    }
-  }, [selectedSeries]);
 
   const filteredSeries = useMemo(() => {
     return seriesList.filter((series) => {

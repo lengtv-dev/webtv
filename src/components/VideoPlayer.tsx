@@ -15,11 +15,7 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  Info,
-  Clock,
-  X,
-  Sparkles,
-  Check
+  Info
 } from 'lucide-react';
 
 interface VideoPlayerProps {
@@ -28,13 +24,6 @@ interface VideoPlayerProps {
   onNextChannel?: () => void;
   onPrevChannel?: () => void;
   isTvMode?: boolean;
-}
-
-interface SavedProgress {
-  currentTime: number;
-  duration: number;
-  title?: string;
-  updatedAt: number;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -58,145 +47,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [showEpgOverlay, setShowEpgOverlay] = useState(false);
   const [streamQuality, setStreamQuality] = useState<string>('Auto (HLS)');
   const hideControlsTimer = useRef<any>(null);
-
-  // VOD Playback Time & Resume State
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
-  const [resumePrompt, setResumePrompt] = useState<{ currentTime: number; duration: number } | null>(null);
-  const [resumeToast, setResumeToast] = useState<string | null>(null);
-  const lastSaveTimeRef = useRef<number>(0);
-  const resumeTimerRef = useRef<any>(null);
-
-  // Format time in seconds to HH:MM:SS or MM:SS
-  const formatTime = (seconds: number): string => {
-    if (isNaN(seconds) || seconds < 0) return '00:00';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) {
-      return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-    }
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
-
-  // Helper to get saved progress for movie or series from localStorage
-  const getSavedProgress = (type: string, id: string | number): SavedProgress | null => {
-    try {
-      const key = `playid_resume_${type}_${id}`;
-      const raw = localStorage.getItem(key);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (typeof parsed?.currentTime === 'number' && parsed.currentTime > 5) {
-        return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed reading playback position from localStorage', e);
-    }
-    return null;
-  };
-
-  // Helper to save progress into localStorage
-  const saveProgress = (time: number, totalDuration: number) => {
-    if (!item || (item.type !== 'movie' && item.type !== 'series')) return;
-    try {
-      const key = `playid_resume_${item.type}_${item.id}`;
-      // If watched near the end (within last 20 seconds or 98%), clear saved position
-      if (totalDuration > 30 && time >= totalDuration - 20) {
-        localStorage.removeItem(key);
-        return;
-      }
-      // Only save if watched more than 5 seconds
-      if (time > 5) {
-        const payload: SavedProgress = {
-          currentTime: Math.floor(time),
-          duration: Math.floor(totalDuration || 0),
-          title: item.title,
-          updatedAt: Date.now(),
-        };
-        localStorage.setItem(key, JSON.stringify(payload));
-      }
-    } catch (err) {
-      console.warn('Error saving playback time:', err);
-    }
-  };
-
-  // Check saved progress when item changes
-  useEffect(() => {
-    if (resumeTimerRef.current) {
-      clearTimeout(resumeTimerRef.current);
-    }
-
-    if (item && (item.type === 'movie' || item.type === 'series')) {
-      const saved = getSavedProgress(item.type, item.id);
-      if (saved && saved.currentTime > 5) {
-        // Show prompt to resume from last position
-        setResumePrompt({
-          currentTime: saved.currentTime,
-          duration: saved.duration || 0,
-        });
-
-        // Auto-dismiss prompt after 14 seconds if no interaction
-        resumeTimerRef.current = setTimeout(() => {
-          setResumePrompt(null);
-        }, 14000);
-      } else {
-        setResumePrompt(null);
-      }
-    } else {
-      setResumePrompt(null);
-    }
-
-    return () => {
-      if (resumeTimerRef.current) {
-        clearTimeout(resumeTimerRef.current);
-      }
-    };
-  }, [item?.id, item?.type]);
-
-  // Save current time when leaving or unmounting
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (videoRef.current && item && (item.type === 'movie' || item.type === 'series')) {
-        saveProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (videoRef.current && item && (item.type === 'movie' || item.type === 'series')) {
-        saveProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
-      }
-    };
-  }, [item?.id, item?.type, duration]);
-
-  const handleConfirmResume = () => {
-    if (!videoRef.current || !resumePrompt) return;
-    const targetTime = resumePrompt.currentTime;
-    videoRef.current.currentTime = targetTime;
-    setCurrentTime(targetTime);
-    setResumeToast(`เล่นต่อจากจุดเดิมที่ ${formatTime(targetTime)}`);
-    setTimeout(() => setResumeToast(null), 3500);
-    setResumePrompt(null);
-    videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-  };
-
-  const handleRestartFromBeginning = () => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      setCurrentTime(0);
-    }
-    setResumePrompt(null);
-    if (item && (item.type === 'movie' || item.type === 'series')) {
-      try {
-        localStorage.removeItem(`playid_resume_${item.type}_${item.id}`);
-      } catch (e) {}
-    }
-  };
-
-  const handleDismissResume = () => {
-    setResumePrompt(null);
-  };
 
   const triggerControlsVisibility = () => {
     setShowControls(true);
@@ -312,51 +162,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [item?.streamUrl, item?.id]);
 
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      if (!isNaN(videoRef.current.duration) && videoRef.current.duration > 0) {
-        setDuration(videoRef.current.duration);
-      }
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (!videoRef.current) return;
-    const curr = videoRef.current.currentTime;
-    setCurrentTime(curr);
-
-    const dur = videoRef.current.duration;
-    if (dur && !isNaN(dur) && dur > 0) {
-      setDuration(dur);
-    }
-
-    // Auto-save playback position for movies and series
-    if (item && (item.type === 'movie' || item.type === 'series')) {
-      const now = Date.now();
-      // Save every 2 seconds
-      if (now - lastSaveTimeRef.current >= 2000) {
-        lastSaveTimeRef.current = now;
-        saveProgress(curr, dur || duration);
-      }
-    }
-  };
-
-  const handlePause = () => {
-    setIsPlaying(false);
-    if (videoRef.current && item && (item.type === 'movie' || item.type === 'series')) {
-      saveProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
-    }
-  };
-
-  const handleEnded = () => {
-    setIsPlaying(false);
-    if (item && (item.type === 'movie' || item.type === 'series')) {
-      try {
-        localStorage.removeItem(`playid_resume_${item.type}_${item.id}`);
-      } catch (e) {}
-    }
-  };
-
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
@@ -365,9 +170,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
-      if (item && (item.type === 'movie' || item.type === 'series')) {
-        saveProgress(videoRef.current.currentTime, videoRef.current.duration || duration);
-      }
     }
   };
 
@@ -441,76 +243,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           setLoading(false);
           setIsPlaying(true);
         }}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onPause={handlePause}
-        onEnded={handleEnded}
       />
-
-      {/* Resume from last position prompt */}
-      {resumePrompt && (
-        <div 
-          id="resume-playback-prompt"
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-35 max-w-sm sm:max-w-md w-[92%] bg-zinc-950/95 border border-amber-500/70 backdrop-blur-md rounded-2xl p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 ring-1 ring-amber-500/20"
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-xs">
-                <RotateCcw className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                  <span>รับชมต่อจากจุดเดิม?</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-mono font-bold border border-amber-500/30">
-                    {formatTime(resumePrompt.currentTime)}
-                  </span>
-                </h4>
-                <p className="text-xs text-zinc-400 mt-1 line-clamp-1">
-                  พบตำแหน่งที่เคยรับชมค้างไว้ที่ {formatTime(resumePrompt.currentTime)}
-                  {resumePrompt.duration > 0 && ` จากทั้งหมด ${formatTime(resumePrompt.duration)}`}
-                </p>
-              </div>
-            </div>
-            <button
-              id="resume-playback-dismiss-btn"
-              onClick={handleDismissResume}
-              className="text-zinc-500 hover:text-zinc-300 p-1 rounded-lg transition cursor-pointer"
-              title="ปิดการแจ้งเตือน"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 mt-3.5 pt-3 border-t border-zinc-800/80">
-            <button
-              id="resume-playback-confirm-btn"
-              onClick={handleConfirmResume}
-              className="flex-1 py-2.5 px-3 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs sm:text-sm rounded-xl transition flex items-center justify-center gap-2 shadow-md cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4 stroke-[2.5]" />
-              <span>รับชมต่อจากจุดเดิม</span>
-            </button>
-            <button
-              id="resume-playback-restart-btn"
-              onClick={handleRestartFromBeginning}
-              className="py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-medium text-xs sm:text-sm rounded-xl transition cursor-pointer border border-zinc-700/60"
-            >
-              <span>เริ่มใหม่ตั้งแต่ต้น</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Resume Toast Feedback */}
-      {resumeToast && (
-        <div 
-          id="resume-playback-toast"
-          className="absolute top-16 left-1/2 -translate-x-1/2 z-35 px-4 py-2 bg-amber-500 text-black font-bold text-xs sm:text-sm rounded-xl shadow-xl flex items-center gap-2 animate-in fade-in duration-200"
-        >
-          <Check className="w-4 h-4 stroke-[3]" />
-          <span>{resumeToast}</span>
-        </div>
-      )}
 
       {/* Loading Spinner */}
       {loading && (
@@ -637,42 +370,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       {/* Bottom Controls Bar */}
       <div 
-        className={`absolute bottom-0 inset-x-0 p-3 sm:p-4 bg-linear-to-t from-black/95 via-black/60 to-transparent transition-opacity duration-300 z-15 flex flex-col gap-2 ${
+        className={`absolute bottom-0 inset-x-0 p-4 bg-linear-to-t from-black/90 via-black/50 to-transparent transition-opacity duration-300 z-15 flex flex-col gap-2 ${
           showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        {/* VOD Timeline scrubber for Movies and Series */}
-        {(item.type === 'movie' || item.type === 'series') && (
-          <div className="w-full flex items-center gap-2.5 px-1">
-            <span className="text-[11px] font-mono font-medium text-zinc-300 min-w-[44px]">
-              {formatTime(currentTime)}
-            </span>
-            <div className="relative flex-1 flex items-center group/scrubber cursor-pointer">
-              <input
-                id="player-timeline-scrubber"
-                type="range"
-                min="0"
-                max={duration > 0 ? duration : 100}
-                step="1"
-                value={currentTime}
-                disabled={duration <= 0}
-                onChange={(e) => {
-                  const newTime = parseFloat(e.target.value);
-                  setCurrentTime(newTime);
-                  if (videoRef.current) {
-                    videoRef.current.currentTime = newTime;
-                  }
-                  saveProgress(newTime, duration);
-                }}
-                className="w-full h-1.5 group-hover/scrubber:h-2.5 bg-zinc-700/80 rounded-lg accent-amber-500 transition-all cursor-pointer"
-              />
-            </div>
-            <span className="text-[11px] font-mono text-zinc-400 min-w-[44px] text-right">
-              {duration > 0 ? formatTime(duration) : '--:--'}
-            </span>
-          </div>
-        )}
-
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Play/Pause Button */}
@@ -680,51 +381,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               id="player-play-pause-btn"
               onClick={togglePlay}
               aria-label={isPlaying ? 'Pause' : 'Play'}
-              className={`rounded-xl bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center transition shadow-lg cursor-pointer ${
+              className={`rounded-xl bg-amber-500 hover:bg-amber-400 text-black flex items-center justify-center transition shadow-lg ${
                 isTvMode ? 'w-14 h-14' : 'w-10 h-10'
               }`}
             >
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
             </button>
-
-            {/* VOD Quick Skip -10s / +10s */}
-            {(item.type === 'movie' || item.type === 'series') && (
-              <div className="flex items-center gap-1 bg-zinc-900/90 p-1 rounded-xl border border-zinc-800">
-                <button
-                  id="player-seek-back-btn"
-                  onClick={() => {
-                    if (!videoRef.current) return;
-                    const newTime = Math.max(0, videoRef.current.currentTime - 10);
-                    videoRef.current.currentTime = newTime;
-                    setCurrentTime(newTime);
-                    saveProgress(newTime, duration);
-                  }}
-                  title="ย้อนกลับ 10 วินาที"
-                  className={`rounded-lg hover:bg-zinc-800 text-zinc-200 flex items-center justify-center transition cursor-pointer ${
-                    isTvMode ? 'w-12 h-12 text-xs' : 'w-8 h-8 text-[11px]'
-                  }`}
-                >
-                  <span className="font-mono font-bold">-10s</span>
-                </button>
-                <button
-                  id="player-seek-forward-btn"
-                  onClick={() => {
-                    if (!videoRef.current) return;
-                    const maxDur = duration || videoRef.current.duration || 999999;
-                    const newTime = Math.min(maxDur, videoRef.current.currentTime + 10);
-                    videoRef.current.currentTime = newTime;
-                    setCurrentTime(newTime);
-                    saveProgress(newTime, duration);
-                  }}
-                  title="ไปข้างหน้า 10 วินาที"
-                  className={`rounded-lg hover:bg-zinc-800 text-zinc-200 flex items-center justify-center transition cursor-pointer ${
-                    isTvMode ? 'w-12 h-12 text-xs' : 'w-8 h-8 text-[11px]'
-                  }`}
-                >
-                  <span className="font-mono font-bold">+10s</span>
-                </button>
-              </div>
-            )}
 
             {/* Prev / Next channel buttons */}
             {item.type === 'live' && (
